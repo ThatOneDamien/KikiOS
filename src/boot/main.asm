@@ -80,15 +80,14 @@ boot_error:
 load_secs_LBA:
     push eax
     push si
-    xor eax, eax
-    push dword eax
-    push word ax
+    push dx
+    push dword 0
+    push word 0
     push word si
     push word es
     push word di
     push word dx
-    mov ax, 0x10
-    push word ax
+    push word 0x10
 .read:
     mov si, sp
     mov ah, 0x42
@@ -99,6 +98,7 @@ load_secs_LBA:
 
 .done:
     add sp, 16
+    pop dx
     pop si
     pop eax
     ret

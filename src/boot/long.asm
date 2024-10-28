@@ -156,8 +156,15 @@ test:
     mov rsp, 0x7c00
     mov rbp, rsp
 
+    cmp byte [KERNEL_LOC], 0x55
+    jne .wrong
+
     push KERNEL_LOC
     ret
+.wrong:
+    mov rax, 0x1F4C1F4C1F4C1F4C
+    mov qword [0xb8000], rax
+    hlt
 
 section .stage_two_data
 TEMP_GDT:

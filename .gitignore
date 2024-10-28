@@ -1,5 +1,8 @@
 *.o
 *.bin
+**/.cache
+**/.vscode
+compile_commands.json
 
 build
 test

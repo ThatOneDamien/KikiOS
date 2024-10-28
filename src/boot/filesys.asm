@@ -39,7 +39,7 @@ section .stage_two_text
 
 ROOT_DIR_BUF equ 0x600
 ENTRY_SIZE equ 32
-KERNEL_LOC equ 0x9000
+KERNEL_LOC equ 0x10000
 
 check_entries:
     push bx
@@ -103,9 +103,9 @@ load_kernel:
     mov si, word [RESERVED_SECS]
     mov di, 0x8500
     call load_secs_LBA
-    mov di, (KERNEL_LOC >> 4) & 0xF000
-    mov es, di
-    mov di, KERNEL_LOC & 0xFFFF
+    mov bx, (KERNEL_LOC >> 4) & 0xFFFF
+    mov es, bx
+    mov di, KERNEL_LOC & 0xF
 .loop2:
     push ax
     movzx cx, byte [SECS_PER_CLUS]
@@ -128,6 +128,8 @@ load_kernel:
     cmp ax, 0xFFF8
     jb .loop2
 .done:
+    mov ax, 0
+    mov es, ax
     add sp, 2
     ret
 .error:

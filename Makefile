@@ -1,13 +1,13 @@
 CC=gcc
 ASM=nasm
 
-CFLAGS=
-ASMFLAGS=
-INCLUDES=
-
 SRC_DIR=src
 OUT_DIR=build
 INT_DIR=build/int
+
+CFLAGS=-nostdinc -fno-builtin
+ASMFLAGS=
+INCLUDES=-I$(SRC_DIR)/lib
 
 BOOT_SRCS:=$(shell find $(SRC_DIR)/boot -name "*.asm")
 BOOT_OBJS:=$(patsubst $(SRC_DIR)/%.asm, $(INT_DIR)/%.o, $(BOOT_SRCS))
