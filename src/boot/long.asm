@@ -141,6 +141,8 @@ enter_long_mode:
     jmp GDT_CODE:test
 
 
+
+extern KERNEL_LOC
 bits 64
 test:
     cli
@@ -150,11 +152,12 @@ test:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov edi, 0xB8000
-    mov rax, 0x1F4B1F4B1F4B1F4B
-    mov ecx, 500
-    rep stosq
-    hlt
+    
+    mov rsp, 0x7c00
+    mov rbp, rsp
+
+    push KERNEL_LOC
+    ret
 
 section .stage_two_data
 TEMP_GDT:

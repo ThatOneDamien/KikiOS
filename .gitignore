@@ -1,2 +1,5 @@
+*.o
+*.bin
+
 build
 test

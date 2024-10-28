@@ -1,31 +1,16 @@
 bits 16
 
-section .filesys_header
-JMP_SHORT        times 3 db 0
-OEM_ID           times 8 db 0
-BYTES_PER_SEC    times 2 db 0
-SECS_PER_CLUS    times 1 db 0
-RESERVED_SECS    times 2 db 0
-FAT_COUNT        times 1 db 0
-ROOT_ENTRY_COUNT times 2 db 0
-TOTAL_SECS       times 2 db 0
-MEDIA_DESC_TYPE  times 1 db 0
-SECS_PER_FAT     times 2 db 0
-SECS_PER_TRACK   times 2 db 0
-HEAD_COUNT       times 2 db 0
-HIDDEN_SECTORS   times 4 db 0
-LARGE_SEC_CNT    times 4 db 0
 
-; Extended Boot Record
-DRIVE_NUMBER     times 1  db 0 ; Set when booted
-                 times 1  db 0 ; Unused Flags
-                 times 1  db 0 ; Signature
-                 times 4  db 0 ; Unused VolumeID
-VOLUME_LABEL     times 11 db 0 ; Exactly 11 bytes
-                 times 8  db 0 ; Unused label
-
+; Long Mode
 extern enter_long_mode 
 
+; Filesystem externs
+extern DRIVE_NUMBER
+extern SECS_PER_TRACK
+extern HEAD_COUNT
+extern RESERVED_SECS
+
+extern load_kernel
 
 section .boot_entry
 global load_secs_LBA
@@ -73,32 +58,37 @@ start:
     mov dx, word [RESERVED_SECS]
     call load_secs_LBA
 
-    
+
+    call load_kernel
     jmp enter_long_mode
-    mov si, UNKNOWN_BOOT_MSG
+
+
+halt_proc:
+    cli
+    hlt
 boot_error:
     call puts
     mov ah, 0
-    int 16h
-    jmp 0FFFFh:0
+    int 0x16
+    jmp 0xFFFF:0
 
 ; Load sectors from boot disk with LBA addressing
 ; Parameters:
-;   di - 16 bit destination location in memory
+;   es:di - destination buffer location in memory
 ;   si - 16 bit starting LBA address
 ;   dx - 16 bit number of sectors to be read
 load_secs_LBA:
     push eax
+    push si
     xor eax, eax
     push dword eax
-    push word ax 
-    push word si
     push word ax
+    push word si
+    push word es
     push word di
     push word dx
     mov ax, 0x10
     push word ax
-
 .read:
     mov si, sp
     mov ah, 0x42
@@ -109,6 +99,7 @@ load_secs_LBA:
 
 .done:
     add sp, 16
+    pop si
     pop eax
     ret
 
@@ -147,4 +138,3 @@ puts:
     ret
 
 DISK_ERROR_MSG   db "Error resetting/reading disk.", 0
-UNKNOWN_BOOT_MSG db "Unknown boot error.", 0 
