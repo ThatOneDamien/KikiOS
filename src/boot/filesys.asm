@@ -37,9 +37,10 @@ global KERNEL_LOC
 
 section .stage_two_text
 
+ENTRY_SIZE   equ 32
 ROOT_DIR_BUF equ 0x600
-ENTRY_SIZE equ 32
-KERNEL_LOC equ 0x10000
+FAT_BUF      equ 0x800
+
 
 check_entries:
     push bx
@@ -49,7 +50,7 @@ check_entries:
     mov bx, ROOT_DIR_BUF
 .loop:
     mov ax, -1
-    cmp bx, 0x800
+    cmp bx, FAT_BUF ; Once we reach the fat buf, stop loop
     jnb .end
     mov cl, byte [bx]
     mov ax, -2
@@ -70,17 +71,25 @@ check_entries:
     pop bx
     ret
 
+
 load_kernel:
     mov si, word [RESERVED_SECS]
+    movzx eax, si
+    shl eax, 9
+    add eax, 0x7C00
+    mov dword [KERNEL_LOC], eax
     movzx ax, byte [FAT_COUNT]
     mov cx, word [SECS_PER_FAT]
     mul cx
     add si, ax
     mov di, ROOT_DIR_BUF
     mov ax, word [ROOT_ENTRY_COUNT]
-    shl ax, 5
-    mov bx, word [BYTES_PER_SEC]
-    div bx
+    
+    ; Here we are assuming that the sector size is 512 bytes
+    ; because there are other areas of the code that would
+    ; also break if that wasn't the case. We shr by 4 because
+    ; 512 / 32 = 16
+    shr ax, 4
     mov cx, ax
     add cx, si
     push cx
@@ -96,16 +105,12 @@ load_kernel:
     cmp ax, -1
     je .loop
     ; Binary found, and its entry location in the buf is stored in ax
-    add ax, 26 ; Offset of first cluster
-    mov bx, ax
-    mov ax, word [bx] ; ax now contains the starting cluster
-    mov dx, 2
-    mov si, word [RESERVED_SECS]
-    mov di, 0x8500
-    call load_secs_LBA
-    mov bx, (KERNEL_LOC >> 4) & 0xFFFF
+    mov di, ax
+    mov ax, word [di + 26] ; ax now contains the starting cluster
+    mov bx, word [KERNEL_LOC + 2]
+    shl bx, 12
     mov es, bx
-    mov di, KERNEL_LOC & 0xF
+    mov di, word [KERNEL_LOC]
 .loop2:
     push ax
     movzx cx, byte [SECS_PER_CLUS]
@@ -121,10 +126,19 @@ load_kernel:
     mul cx
     add di, ax
     pop ax
-    mov bx, 0x8500
+    push di
+    mov dx, 1
+    mov di, FAT_BUF
+    mov si, ax
+    shr si, 8 ; 256 entries per sector of fat
+    add si, word [RESERVED_SECS]
+
+    call load_secs_LBA
+    and ax, 0xFF
     shl ax, 1
-    add bx, ax
-    mov ax, word [bx]
+    add di, ax
+    mov ax, word [di]
+    pop di
     cmp ax, 0xFFF8
     jb .loop2
 .done:
@@ -137,5 +151,6 @@ load_kernel:
     jmp boot_error
 
 section .stage_two_data
-KERNEL_BIN_STR db "KERNEL  BIN"
+KERNEL_BIN_STR   db "KERNEL  BIN"
 KERNEL_NOT_FOUND db "Kernel binary not found."
+KERNEL_LOC       dd 0 ; Will be determined at boot

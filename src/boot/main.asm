@@ -1,5 +1,7 @@
 bits 16
 
+STAGE_TWO_LOC equ 0x7E00
+
 
 ; Long Mode
 extern enter_long_mode 
@@ -53,9 +55,10 @@ start:
 
     ; Load stage 2 boot loader stored
     ; in the reserved sectors of the fs
-    mov di, 0x7E00
+    mov di, STAGE_TWO_LOC
     mov si, 1
     mov dx, word [RESERVED_SECS]
+    dec dx
     call load_secs_LBA
 
 

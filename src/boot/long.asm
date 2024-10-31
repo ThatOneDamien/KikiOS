@@ -156,10 +156,12 @@ test:
     mov rsp, 0x7c00
     mov rbp, rsp
 
-    cmp byte [KERNEL_LOC], 0x55
+    mov edi, dword [KERNEL_LOC]
+
+    cmp byte [edi], 0x55
     jne .wrong
 
-    push KERNEL_LOC
+    push rdi
     ret
 .wrong:
     mov rax, 0x1F4C1F4C1F4C1F4C

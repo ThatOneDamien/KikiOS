@@ -1,5 +1,7 @@
 OUTPUT_FORMAT(binary)
 
+INCLUDE "build/env.ld"
+
 SECTIONS 
 {
     . = 0x10000;

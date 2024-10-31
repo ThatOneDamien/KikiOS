@@ -1,5 +1,7 @@
 OUTPUT_FORMAT(binary)
 
+INCLUDE "build/env.ld"
+
 SECTIONS 
 {
     . = 0x7c00;
@@ -16,12 +18,13 @@ SECTIONS
         BYTE(0x55) 
         BYTE(0xAA)
     }
-    extra_secs = 2;
+
     start = .;
     .stage_two_text : { *(.stage_two_text) }
     .stage_two_data : { *(.stage_two_data) }
     .stage_two_bss  : { *(.stage_two_bss)  }
     end = .;
-    ASSERT(end - start <= 512 * extra_secs, "Stage two bootloader exceeds reserved space.")
+    ASSERT(RESERVED_SECS >= 1, "Reserved sectors are invalid. Check that the env linkerscript was built correctly.")
+    ASSERT(end - start <= 512 * (RESERVED_SECS - 1), "Stage two bootloader exceeds reserved space.")
 }
 

@@ -1,10 +1,15 @@
 #ifndef _KIKI_TYPES_H
 #define _KIKI_TYPES_H
 
+#include "compdef.h"
+
 #ifndef __cplusplus
-typedef unsigned char bool;
+#define bool _Bool
 #define false 0
 #define true  1
+#define NULL (void*)0
+#else
+#define NULL 0
 #endif
 
 typedef signed char  int8_t;
