@@ -26,9 +26,11 @@ GDT_CODE equ 0x8
 GDT_DATA equ 0x10
 GDT_TSS  equ 0x18
 
-section .stage_two_text
-global enter_long_mode
 extern boot_error
+
+section .stage_two_text
+
+global enter_long_mode
 enter_long_mode:
     ; Check for CPUID support
     pushfd
@@ -141,7 +143,6 @@ enter_long_mode:
     jmp GDT_CODE:test
 
 
-
 extern KERNEL_LOC
 bits 64
 test:
@@ -153,7 +154,7 @@ test:
     mov gs, ax
     mov ss, ax
     
-    mov rsp, 0x7c00
+    mov esp, dword [KERNEL_LOC]
     mov rbp, rsp
 
     mov edi, dword [KERNEL_LOC]
@@ -171,25 +172,25 @@ test:
 section .stage_two_data
 TEMP_GDT:
     ; NULL
-        dq 0
+    dq 0
     ; CODE
-        dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
-        db 0                                ; Base (mid, bits 16-23)
-        db PRESENT | NOT_SYS | EXEC | RW    ; Access
-        db GRAN_4K | LONG_MODE | 0xF        ; Flags & Limit (high, bits 16-19)
-        db 0                                ; Base (high, bits 24-31)
+    dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
+    db 0                                ; Base (mid, bits 16-23)
+    db PRESENT | NOT_SYS | EXEC | RW    ; Access
+    db GRAN_4K | LONG_MODE | 0xF        ; Flags & Limit (high, bits 16-19)
+    db 0                                ; Base (high, bits 24-31)
     ; DATA
-        dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
-        db 0                                ; Base (mid, bits 16-23)
-        db PRESENT | NOT_SYS | RW           ; Access
-        db GRAN_4K | SZ_32 | 0xF            ; Flags & Limit (high, bits 16-19)
-        db 0                                ; Base (high, bits 24-31)
+    dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
+    db 0                                ; Base (mid, bits 16-23)
+    db PRESENT | NOT_SYS | RW           ; Access
+    db GRAN_4K | SZ_32 | 0xF            ; Flags & Limit (high, bits 16-19)
+    db 0                                ; Base (high, bits 24-31)
     ; TSS
-        dd 0x00000068
-        dd 0x00CF8900
-    .Pointer:
-        dw $ - TEMP_GDT - 1
-        dq GDT
+    dd 0x00000068
+    dd 0x00CF8900
+.Pointer:
+    dw $ - TEMP_GDT - 1
+    dq GDT
 
 NO_CPUID_MSG     db "CPUID instruction not supported.", 0
 NO_LONG_MODE_MSG db "Unable to enter long mode.", 0

@@ -2,6 +2,7 @@
 #define _KIKI_TYPES_H
 
 #include "compdef.h"
+#include "limits.h"
 
 #ifndef __cplusplus
 #define bool _Bool

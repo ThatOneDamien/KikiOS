@@ -5,9 +5,9 @@ SRC_DIR=src
 OUT_DIR=build
 INT_DIR=build/int
 
-CFLAGS=-nostdinc -fno-builtin -Wall -Wextra -DKIKI_DEBUG
+CFLAGS=-nostdinc -fno-builtin -fno-stack-protector -Wall -Wextra -DKIKI_DEBUG
 ASMFLAGS=
-INCLUDES=-I$(SRC_DIR)/lib
+INCLUDES=-I$(SRC_DIR)/kernel -I$(SRC_DIR)/cstdinc
 
 BOOT_SRCS:=$(shell find $(SRC_DIR)/boot -name "*.asm")
 BOOT_OBJS:=$(patsubst $(SRC_DIR)/%.asm, $(INT_DIR)/%.o, $(BOOT_SRCS))

@@ -4,19 +4,21 @@ STAGE_TWO_LOC equ 0x7E00
 
 
 ; Long Mode
-extern enter_long_mode 
+extern enter_long_mode
 
-; Filesystem externs
+; Filesystem Data
 extern DRIVE_NUMBER
 extern SECS_PER_TRACK
 extern HEAD_COUNT
 extern RESERVED_SECS
 
+; Filesystem Func
 extern load_kernel
 
+; Memory mapping
+extern mmap_get
+
 section .boot_entry
-global load_secs_LBA
-global boot_error
 
 start:
     ; Set segment registers to known state (zeroed out)
@@ -39,13 +41,13 @@ start:
 .jumped:
     mov byte [DRIVE_NUMBER], dl
 
-    mov si, DISK_ERROR_MSG
+    mov si, DISK_ERR_MSG
     ; Query BIOS for sectors per track and head count of the drive number in dl
     mov ah, 8
     xor di, di
     stc
     int 0x13
-    jc boot_error
+    jc short boot_error
     and cl, 0x3F
     mov byte [SECS_PER_TRACK], cl
     mov al, dh
@@ -61,25 +63,32 @@ start:
     dec dx
     call load_secs_LBA
 
-
+    ; Load Kernel obviously
     call load_kernel
+
+    ; Get memory map
+    call mmap_get
+
+    ; Enter long mode, and pass control to kernel
+    ; This will not return
     jmp enter_long_mode
 
-
-halt_proc:
-    cli
-    hlt
+global boot_error
 boot_error:
+    call puts
+    mov si, KEY_RESET_MSG
     call puts
     mov ah, 0
     int 0x16
-    jmp 0xFFFF:0
+    jmp 0xFFFF:0x0
+    hlt
 
 ; Load sectors from boot disk with LBA addressing
 ; Parameters:
 ;   es:di - destination buffer location in memory
 ;   si - 16 bit starting LBA address
 ;   dx - 16 bit number of sectors to be read
+global load_secs_LBA
 load_secs_LBA:
     push eax
     push si
@@ -97,7 +106,7 @@ load_secs_LBA:
     mov dl, byte [DRIVE_NUMBER]
     stc
     int 0x13
-    jc .reset_disk
+    jc short .reset_disk
 
 .done:
     add sp, 16
@@ -109,9 +118,11 @@ load_secs_LBA:
 .reset_disk:
     xor ah, ah
     int 0x13
-    jnc .read
-    mov si, DISK_ERROR_MSG
-    jmp boot_error
+    jnc short .read
+    mov si, DISK_ERR_MSG
+    jmp short boot_error
+
+
 
 ;
 ; Prints string
@@ -126,13 +137,13 @@ puts:
 .loop:
     lodsb
     or al, al
-    jz .done
+    jz short .done
 
     mov ah, 0x0E
     mov bh, 0
     int 0x10
 
-    jmp .loop
+    jmp short .loop
 
 .done:
     pop bx
@@ -140,4 +151,5 @@ puts:
     pop si
     ret
 
-DISK_ERROR_MSG   db "Error resetting/reading disk.", 0
+DISK_ERR_MSG  db "Error resetting/reading disk.", 10, 13, 0
+KEY_RESET_MSG db "Press any key to reboot.", 10, 13, 0

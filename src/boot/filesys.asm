@@ -74,10 +74,6 @@ check_entries:
 
 load_kernel:
     mov si, word [RESERVED_SECS]
-    movzx eax, si
-    shl eax, 9
-    add eax, 0x7C00
-    mov dword [KERNEL_LOC], eax
     movzx ax, byte [FAT_COUNT]
     mov cx, word [SECS_PER_FAT]
     mul cx
@@ -107,10 +103,11 @@ load_kernel:
     ; Binary found, and its entry location in the buf is stored in ax
     mov di, ax
     mov ax, word [di + 26] ; ax now contains the starting cluster
-    mov bx, word [KERNEL_LOC + 2]
-    shl bx, 12
+    mov ebx, dword [KERNEL_LOC]
+    mov di, bx
+    and di, 0xF
+    shr ebx, 4
     mov es, bx
-    mov di, word [KERNEL_LOC]
 .loop2:
     push ax
     movzx cx, byte [SECS_PER_CLUS]
@@ -120,20 +117,25 @@ load_kernel:
     mov bx, sp
     add si, word [bx + 2]
     mov dx, cx
-    call load_secs_LBA
+    call load_secs_LBA ; Load a kernel cluster
     mov ax, dx
     mov cx, word [BYTES_PER_SEC] 
     mul cx
     add di, ax
     pop ax
+
+    ; Load the needed FAT sector and get next cluster
     push di
     mov dx, 1
     mov di, FAT_BUF
     mov si, ax
     shr si, 8 ; 256 entries per sector of fat
     add si, word [RESERVED_SECS]
-
+    push word es
+    xor bx, bx
+    mov es, bx
     call load_secs_LBA
+    pop word es
     and ax, 0xFF
     shl ax, 1
     add di, ax
@@ -142,7 +144,7 @@ load_kernel:
     cmp ax, 0xFFF8
     jb .loop2
 .done:
-    mov ax, 0
+    xor ax, ax
     mov es, ax
     add sp, 2
     ret
@@ -153,4 +155,4 @@ load_kernel:
 section .stage_two_data
 KERNEL_BIN_STR   db "KERNEL  BIN"
 KERNEL_NOT_FOUND db "Kernel binary not found."
-KERNEL_LOC       dd 0 ; Will be determined at boot
+KERNEL_LOC       dd 0x10000
