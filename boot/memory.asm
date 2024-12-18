@@ -7,7 +7,7 @@ MMAP_MAGIC     equ 0x534D4150
 
 extern boot_error
 
-section .stage_two_text
+section .text
 
 global mmap_get
 mmap_get:
@@ -61,6 +61,6 @@ mmap_get:
     clc
     ret
 
-section .stage_two_data
+section .rodata
 
 MMAP_NOT_SUPPORTED_MSG db "Failed to produce viable memory map.", 10, 13, 0

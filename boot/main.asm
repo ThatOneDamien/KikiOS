@@ -2,25 +2,50 @@ bits 16
 
 STAGE_TWO_LOC equ 0x7E00
 
+; -------------------------------------
 
-; Long Mode
+section .filesys_header
+JMP_SHORT        times 3 db 0
+OEM_ID           times 8 db 0
+BYTES_PER_SEC    times 2 db 0
+SECS_PER_CLUS    times 1 db 0
+RESERVED_SECS    times 2 db 0
+FAT_COUNT        times 1 db 0
+ROOT_ENTRY_COUNT times 2 db 0
+TOTAL_SECS       times 2 db 0
+MEDIA_DESC_TYPE  times 1 db 0
+SECS_PER_FAT     times 2 db 0
+SECS_PER_TRACK   times 2 db 0
+HEAD_COUNT       times 2 db 0
+HIDDEN_SECTORS   times 4 db 0
+LARGE_SEC_CNT    times 4 db 0
+
+; Extended Boot Record
+DRIVE_NUMBER     times 1  db 0 ; Set when booted
+                 times 1  db 0 ; Unused Flags
+                 times 1  db 0 ; Signature
+                 times 4  db 0 ; Unused VolumeID
+VOLUME_LABEL     times 11 db 0 ; Exactly 11 bytes
+                 times 8  db 0 ; Unused label
+
+global RESERVED_SECS
+global FAT_COUNT
+global SECS_PER_FAT
+global ROOT_ENTRY_COUNT
+global SECS_PER_CLUS
+global BYTES_PER_SEC
+
+; --------------------------------------
+
+
+extern load_kernel
+extern mmap_get
 extern enter_long_mode
 
-; Filesystem Data
-extern DRIVE_NUMBER
-extern SECS_PER_TRACK
-extern HEAD_COUNT
-extern RESERVED_SECS
 
-; Filesystem Func
-extern load_kernel
-
-; Memory mapping
-extern mmap_get
-
-section .boot_entry
-
+section .entry
 start:
+
     ; Set segment registers to known state (zeroed out)
     xor ax, ax
     mov ds, ax
@@ -73,6 +98,8 @@ start:
     ; This will not return
     jmp enter_long_mode
 
+
+section .boot_sector
 global boot_error
 boot_error:
     call puts
@@ -80,7 +107,7 @@ boot_error:
     call puts
     mov ah, 0
     int 0x16
-    jmp 0xFFFF:0x0
+    jmp 0xFFFF:0x0 ; Tell BIOS to reboot system
     hlt
 
 ; Load sectors from boot disk with LBA addressing

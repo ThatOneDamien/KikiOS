@@ -1,11 +1,11 @@
 bits 64
-global __debug_print_regs
+global kernel_print_regs
 
-extern __debug_printf
+extern kernel_printf
 
 section .text
 
-__debug_print_regs:
+kernel_print_regs:
     push rbp
     mov rbp, rsp
 
@@ -22,7 +22,7 @@ __debug_print_regs:
     mov rax, [rbp + 56]
     push rax
     xor rax, rax
-    call __debug_printf
+    call kernel_printf
     add sp, 24
 
     leave

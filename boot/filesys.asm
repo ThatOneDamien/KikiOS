@@ -1,46 +1,23 @@
 bits 16
 
-global DRIVE_NUMBER
-global SECS_PER_TRACK
-global HEAD_COUNT
-global RESERVED_SECS
-
-section .filesys_header
-JMP_SHORT        times 3 db 0
-OEM_ID           times 8 db 0
-BYTES_PER_SEC    times 2 db 0
-SECS_PER_CLUS    times 1 db 0
-RESERVED_SECS    times 2 db 0
-FAT_COUNT        times 1 db 0
-ROOT_ENTRY_COUNT times 2 db 0
-TOTAL_SECS       times 2 db 0
-MEDIA_DESC_TYPE  times 1 db 0
-SECS_PER_FAT     times 2 db 0
-SECS_PER_TRACK   times 2 db 0
-HEAD_COUNT       times 2 db 0
-HIDDEN_SECTORS   times 4 db 0
-LARGE_SEC_CNT    times 4 db 0
-
-; Extended Boot Record
-DRIVE_NUMBER     times 1  db 0 ; Set when booted
-                 times 1  db 0 ; Unused Flags
-                 times 1  db 0 ; Signature
-                 times 4  db 0 ; Unused VolumeID
-VOLUME_LABEL     times 11 db 0 ; Exactly 11 bytes
-                 times 8  db 0 ; Unused label
-
 extern load_secs_LBA
 extern boot_error
 
-global load_kernel
-global KERNEL_LOC
+extern RESERVED_SECS
+extern FAT_COUNT
+extern SECS_PER_FAT
+extern ROOT_ENTRY_COUNT
+extern SECS_PER_CLUS
+extern BYTES_PER_SEC
 
-section .stage_two_text
+section .text
 
 ENTRY_SIZE   equ 32
 ROOT_DIR_BUF equ 0x600
 FAT_BUF      equ 0x800
 
+global KERNEL_LOC
+KERNEL_LOC equ 0x10000
 
 check_entries:
     push bx
@@ -49,6 +26,15 @@ check_entries:
     push di
     mov bx, ROOT_DIR_BUF
 .loop:
+    push ax
+    push bx
+    mov ah, 0xe
+    mov al, 'H'
+    xor bx, bx 
+    int 0x10
+    pop bx
+    pop ax
+
     mov ax, -1
     cmp bx, FAT_BUF ; Once we reach the fat buf, stop loop
     jnb .end
@@ -72,6 +58,7 @@ check_entries:
     ret
 
 
+global load_kernel
 load_kernel:
     mov si, word [RESERVED_SECS]
     movzx ax, byte [FAT_COUNT]
@@ -103,11 +90,9 @@ load_kernel:
     ; Binary found, and its entry location in the buf is stored in ax
     mov di, ax
     mov ax, word [di + 26] ; ax now contains the starting cluster
-    mov ebx, dword [KERNEL_LOC]
-    mov di, bx
-    and di, 0xF
-    shr ebx, 4
-    mov es, bx
+    mov di, KERNEL_LOC >> 4
+    mov es, di
+    mov di, KERNEL_LOC & 0xF
 .loop2:
     push ax
     movzx cx, byte [SECS_PER_CLUS]
@@ -121,6 +106,14 @@ load_kernel:
     mov ax, dx
     mov cx, word [BYTES_PER_SEC] 
     mul cx
+    mov cx, ax
+    neg cx
+    cmp di, cx
+    jb .no_carry
+    mov cx, es
+    add cx, 0x1000
+    mov es, cx
+.no_carry:
     add di, ax
     pop ax
 
@@ -152,7 +145,6 @@ load_kernel:
     mov si, KERNEL_NOT_FOUND
     jmp boot_error
 
-section .stage_two_data
+section .rodata
 KERNEL_BIN_STR   db "KERNEL  BIN"
 KERNEL_NOT_FOUND db "Kernel binary not found."
-KERNEL_LOC       dd 0x10000

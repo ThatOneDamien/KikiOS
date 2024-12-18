@@ -2,11 +2,11 @@
 #define _KIKI_COMPDEF_H
 
 #ifdef __cplusplus
-#define KIKI_BEGIN_EXTERN_C extern "C" {
-#define KIKI_END_EXTERN_C }
+    #define KIKI_BEGIN_EXTERN_C extern "C" {
+    #define KIKI_END_EXTERN_C }
 #else
-#define KIKI_BEGIN_EXTERN_C
-#define KIKI_END_EXTERN_C
+    #define KIKI_BEGIN_EXTERN_C
+    #define KIKI_END_EXTERN_C
 #endif
 
 #ifdef __GNUC__

@@ -7,28 +7,10 @@ PDT_LOC    equ 0x3000
 PT_LOC     equ 0x4000
 PAGE_FLAGS equ 0b11   ; Present, readable, and writable
 
-; Access bits
-PRESENT        equ 1 << 7
-NOT_SYS        equ 1 << 4
-EXEC           equ 1 << 3
-DC             equ 1 << 2
-RW             equ 1 << 1
-ACCESSED       equ 1 << 0
-
-; Flags bits
-GRAN_4K       equ 1 << 7
-SZ_32         equ 1 << 6
-LONG_MODE     equ 1 << 5
-
-GDT      equ 0x500
-GDT_NULL equ 0x0
-GDT_CODE equ 0x8
-GDT_DATA equ 0x10
-GDT_TSS  equ 0x18
 
 extern boot_error
 
-section .stage_two_text
+section .text
 
 global enter_long_mode
 enter_long_mode:
@@ -46,8 +28,7 @@ enter_long_mode:
     popfd
     xor eax, ecx
 
-    ; If bit 21 is unaltered, don't boot. Maybe later I'll add support for
-    ; 32 bit but for now I want to only work in 64 bit
+    ; If bit 21 is unaltered, CPUID is not supported don't boot. 
     mov si, NO_CPUID_MSG
     jz boot_error
 
@@ -132,65 +113,68 @@ enter_long_mode:
     or eax, 1 << 31 | 1 << 0     ; Set the PG-bit, which is the 31nd bit, and the PM-bit, which is the 0th bit.
     mov cr0, eax
 
-    ; Copy entries from GDT loaded from reserved sectors to
-    ; its permanent location at 0x500 in memory.
-    mov si, TEMP_GDT
-    mov di, GDT
-    mov ecx, 16
-    rep movsw
-    
-    lgdt [TEMP_GDT.Pointer]
-    jmp GDT_CODE:test
+    lgdt [GDT.Pointer]
+    jmp GDT.Code:test
 
 
 extern KERNEL_LOC
 bits 64
 test:
     cli
-    mov ax, GDT_DATA
+    mov ax, GDT.Data
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
     
-    mov esp, dword [KERNEL_LOC]
+    mov esp, KERNEL_LOC
     mov rbp, rsp
 
-    mov edi, dword [KERNEL_LOC]
-
-    cmp byte [edi], 0x55
-    jne .wrong
-
-    push rdi
+    ; Hack return to pass control to the kernel
+    push rsp
     ret
-.wrong:
-    mov rax, 0x1F4C1F4C1F4C1F4C
-    mov qword [0xb8000], rax
-    hlt
 
-section .stage_two_data
-TEMP_GDT:
-    ; NULL
+
+
+; GDT Flags
+; Access bits
+PRESENT        equ 1 << 7
+NOT_SYS        equ 1 << 4
+EXEC           equ 1 << 3
+DC             equ 1 << 2
+RW             equ 1 << 1
+ACCESSED       equ 1 << 0
+
+; Flags bits
+GRAN_4K       equ 1 << 7
+SZ_32         equ 1 << 6
+LONG_MODE     equ 1 << 5
+
+
+section .data
+align 8
+GDT:
+.Null: equ $ - GDT
     dq 0
-    ; CODE
+.Code: equ $ - GDT
     dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
     db 0                                ; Base (mid, bits 16-23)
     db PRESENT | NOT_SYS | EXEC | RW    ; Access
     db GRAN_4K | LONG_MODE | 0xF        ; Flags & Limit (high, bits 16-19)
     db 0                                ; Base (high, bits 24-31)
-    ; DATA
+.Data: equ $ - GDT
     dd 0xFFFF                           ; Limit & Base (low, bits 0-15)
     db 0                                ; Base (mid, bits 16-23)
     db PRESENT | NOT_SYS | RW           ; Access
     db GRAN_4K | SZ_32 | 0xF            ; Flags & Limit (high, bits 16-19)
     db 0                                ; Base (high, bits 24-31)
-    ; TSS
-    dd 0x00000068
-    dd 0x00CF8900
 .Pointer:
-    dw $ - TEMP_GDT - 1
+    dw $ - GDT - 1
     dq GDT
+
+
+section .rodata
 
 NO_CPUID_MSG     db "CPUID instruction not supported.", 0
 NO_LONG_MODE_MSG db "Unable to enter long mode.", 0

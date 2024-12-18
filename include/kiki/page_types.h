@@ -1,0 +1,8 @@
+#ifndef _KIKI_PAGE_TYPES_H
+#define _KIKI_PAGE_TYPES_H
+
+#define KIKI_PAGE_SIZE     4096
+#define KIKI_PAGE_OFS_MASK (KIKI_PAGE_SIZE - 1)
+#define KIKI_PAGE_MASK     (~KIKI_PAGE_OFS_MASK)
+
+#endif // !_KIKI_PAGE_TYPES_H
